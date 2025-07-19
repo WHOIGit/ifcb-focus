@@ -1,0 +1,8 @@
+pandas
+scikit-image
+Pillow
+matplotlib
+tqdm
+scikit-learn
+seaborn
+git+https://github.com/joefutrelle/pyifcb.git
