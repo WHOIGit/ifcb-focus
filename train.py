@@ -28,31 +28,22 @@ def load_images(image_paths):
         image_id = os.path.splitext(os.path.basename(path))[0]
         yield image, image_id
 
-def preprocess_image(image, target_size=None, denoise_sigma=0.5, enhance_contrast=True):
+def preprocess_image(image, target_size=None, enhance_contrast=True):
     """
     Preprocess the image: grayscale, normalize, denoise, enhance contrast, and resize.
 
     Parameters:
         image (ndarray): Input image (2D grayscale or 3D RGB).
         target_size (tuple): Optional (height, width) to resize the image.
-        denoise_sigma (float): Gaussian blur sigma for mild denoising.
         enhance_contrast (bool): Whether to apply adaptive histogram equalization.
 
     Returns:
         ndarray: Preprocessed 2D float32 image in [0, 1].
     """
-    # Convert to grayscale if image is RGB
-    if image.ndim == 3:
-        image = color.rgb2gray(image)
-
     # Normalize to [0, 1] float
     image = img_as_float(image)
 
-    # Mild denoising with Gaussian filter
-    if denoise_sigma > 0:
-        image = gaussian(image, sigma=denoise_sigma, preserve_range=True)
-
-    # Contrast enhancement
+   # Contrast enhancement
     if enhance_contrast:
         image = exposure.equalize_adapthist(image, clip_limit=0.03)
 
