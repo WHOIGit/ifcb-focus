@@ -5,4 +5,5 @@ matplotlib
 tqdm
 scikit-learn
 seaborn
+PyWavelets
 git+https://github.com/joefutrelle/pyifcb.git
