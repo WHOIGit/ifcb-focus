@@ -10,6 +10,8 @@ from sklearn.metrics import classification_report, accuracy_score
 from feature_extraction import rank_feature_speed, feature_names
 from train_teacher_model import features_and_labels
 
+from score_bins import STUDENT_MODEL_FEATURES
+
 DATA_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
 
 def feature_ranking(model):
@@ -32,7 +34,7 @@ def feature_ranking(model):
 
     return candidate_ranking
 
-def train_student_model():
+def search_for_features():
     X_train, y_train, X_val, y_val, feature_names = features_and_labels()
 
     # Load the teacher model
@@ -64,8 +66,42 @@ def train_student_model():
     model_path = os.path.join(DATA_DIR, 'student_model.pkl')
     joblib.dump(model, model_path)
 
-if __name__ == "__main__":
+def train_student_model():
+    X_train, y_train, X_val, y_val, feature_names = features_and_labels()
+
+    # Load the teacher model
     teacher_model = joblib.load(os.path.join(DATA_DIR, 'teacher_model.pkl'))
-    candidate_ranking = feature_ranking(teacher_model)
-    selected_features = candidate_ranking[:4]  # Select top 4 features
-    print("Selected features for student model:", selected_features)
+    
+    y_train_proba = teacher_model.predict_proba(X_train)[:, 1]
+    
+    # top n features based on the ranking
+    ranked_indices = [feature_names.index(f) for f in STUDENT_MODEL_FEATURES]
+    X_train_ranked = X_train[:, ranked_indices]
+    X_val_ranked = X_val[:, ranked_indices]
+
+    # train a regressor to predict the teacher's probabilities
+    model = RandomForestRegressor(
+        n_estimators=100, random_state=42, max_depth=10,
+        min_samples_split=4, min_samples_leaf=2, max_leaf_nodes=64
+    )
+    model.fit(X_train_ranked, y_train_proba)
+
+    # Evaluate the model on the validation set
+    y_val_pred = model.predict(X_val_ranked)
+    accuracy = accuracy_score(y_val, (y_val_pred > 0.5).astype(int))
+    # print report
+    print("Validation Classification Report:")
+    print(classification_report(y_val, (y_val_pred > 0.5).astype(int)))
+    print("Validation Accuracy:", accuracy)
+    
+    importances = model.feature_importances_
+    feature_importance = pd.DataFrame({'feature': STUDENT_MODEL_FEATURES, 'importance': importances})
+    print("Feature Importances:")
+    print(feature_importance.sort_values(by='importance', ascending=False))
+
+    # save the model
+    model_path = os.path.join(DATA_DIR, 'slim_student_model.pkl')
+    joblib.dump(model, model_path)
+
+if __name__ == "__main__":
+    train_student_model()
