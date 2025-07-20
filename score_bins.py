@@ -22,6 +22,11 @@ def score_bin(b, model):
     return score
 
 def extract_slim_features(b):
+    # first, see if we've already computed the full features
+    features_path = os.path.join(DATA_DIR, 'features', f"{b.lid}_features.csv")
+    if os.path.exists(features_path):
+        features_df = pd.read_csv(features_path)
+        return features_df[STUDENT_MODEL_FEATURES + ['pid']]
     roi_numbers = list(b.images.keys())
     features = []
     for roi in roi_numbers:
@@ -40,9 +45,15 @@ def score_remote_bin(host, pid, model):
 
 if __name__ == "__main__":
     model = joblib.load(os.path.join(DATA_DIR, 'student_model.pkl'))
+    ground_truth = pd.read_csv(os.path.join(DATA_DIR, 'ground_truth.csv'))
+    def get_true_label(pid):
+        row = ground_truth[ground_truth['pid'] == pid]
+        if not row.empty:
+            return row['true_label'].values[0]
+        return 0
     RAW_DATA_DIR = os.path.join(DATA_DIR, 'raw_data')
-    dd = DataDirectory(DATA_DIR, 'raw_data')
+    dd = DataDirectory(RAW_DATA_DIR)
     print('pid,score,label')
     for b in dd:
         score = score_bin(b, model)
-        print(f'{b.lid},{score:.4f},{int(score > 0.5)}')
+        print(f'{b.lid},{score:.4f},{int(score > 0.5)},{get_true_label(b.lid)}')
