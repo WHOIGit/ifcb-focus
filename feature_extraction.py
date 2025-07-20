@@ -87,7 +87,7 @@ def image_kurtosis(image):
 def quantile_diff(image):
     return np.percentile(image, 95) - np.percentile(image, 80)
 
-def extract_features(image):
+def extract_features(image, feature_subset=None):
     """
     Compute a comprehensive set of sharpness and texture features.
 
@@ -97,26 +97,34 @@ def extract_features(image):
     Returns:
         dict: Dictionary of computed features.
     """
-    sobel_x_var, sobel_y_var = directional_gradients(image)
 
-    features = {
-        'tenengrad': tenengrad_sharpness(image),
-        'dog_var': dog_variance(image),
-        'edge_density': edge_density(image),
-        'local_std': local_std(image),
-        'mad': mad(image),
-        'sum_modified_laplacian': sum_modified_laplacian(image),
-        'brenner_gradient': brenner_gradient(image),
-        'fft_high_freq_ratio': fft_high_freq_ratio(image),
-        'wavelet_energy': wavelet_energy(image),
-        'glcm_contrast': glcm_contrast(image),
-        'entropy': entropy_feature(image),
-        'laplacian_var': laplacian_variance(image),
-        'sobel_x_var': sobel_x_var,
-        'sobel_y_var': sobel_y_var,
-        'kurtosis': image_kurtosis(image),
-        'quantile_diff': quantile_diff(image),
+    if feature_subset is None:
+        feature_subset = feature_names()
+
+    features = {}
+
+    available_features = {
+        'tenengrad': tenengrad_sharpness,
+        'dog_var': dog_variance,
+        'edge_density': edge_density,
+        'local_std': local_std,
+        'mad': mad,
+        'sum_modified_laplacian': sum_modified_laplacian,
+        'brenner_gradient': brenner_gradient,
+        'fft_high_freq_ratio': fft_high_freq_ratio,
+        'wavelet_energy': wavelet_energy,
+        'glcm_contrast': glcm_contrast,
+        'entropy': entropy_feature,
+        'laplacian_var': laplacian_variance,
+        'sobel_x_var': lambda img: directional_gradients(img)[0],
+        'sobel_y_var': lambda img: directional_gradients(img)[1],
+        'kurtosis': image_kurtosis,
+        'quantile_diff': quantile_diff,
     }
+
+    for feature_name in feature_subset:
+        if feature_name in available_features:
+            features[feature_name] = available_features[feature_name](image)
 
     return features
 
