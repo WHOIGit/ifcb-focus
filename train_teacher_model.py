@@ -69,11 +69,11 @@ def features_and_labels(training_set_path, validation_set_path, features_dir):
 
     return X_train, y_train, X_val, y_val, feature_names
 
-def train_random_forest(training_set_path, validation_set_path, features_dir, output_path):
-    """Train a Random Forest teacher model for IFCB focus classification.
+def train_and_validate_model(training_set_path, validation_set_path, features_dir, output_path):
+    """Train and validate a Random Forest teacher model for IFCB focus classification.
     
-    Loads training data, trains a Random Forest classifier, evaluates performance,
-    and saves the trained model for use as a teacher in knowledge distillation.
+    Loads training and validation data, trains a Random Forest classifier, 
+    evaluates performance on both test split and validation set, and saves the model.
     
     Args:
         training_set_path (str): Path to training set CSV file.
@@ -84,50 +84,39 @@ def train_random_forest(training_set_path, validation_set_path, features_dir, ou
     Returns:
         RandomForestClassifier: The trained Random Forest model.
     """
-    X_train, y_train, _, _, feature_names = features_and_labels(training_set_path, validation_set_path, features_dir)
+    # Load all data once
+    X_train, y_train, X_val, y_val, feature_names = features_and_labels(training_set_path, validation_set_path, features_dir)
 
-    # Split training data into training and validation sets
-    X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+    # Split training data into training and test sets for initial evaluation
+    X_train_split, X_test, y_train_split, y_test = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
 
     # Train a Random Forest Classifier
     model = RandomForestClassifier(n_estimators=100, random_state=42)
-    model.fit(X_train, y_train)
+    model.fit(X_train_split, y_train_split)
 
-    # Evaluate the model on the test set
+    # Evaluate the model on the test split
     y_pred = model.predict(X_test)
+    print("Test Split Classification Report:")
     print(classification_report(y_test, y_pred))
-    print("Accuracy:", accuracy_score(y_test, y_pred))
+    print("Test Split Accuracy:", accuracy_score(y_test, y_pred))
 
+    # Evaluate the model on the validation set
+    y_val_pred = model.predict(X_val)
+    print("\nValidation Set Classification Report:")
+    print(classification_report(y_val, y_val_pred))
+    print("Validation Set Accuracy:", accuracy_score(y_val, y_val_pred))
+
+    # Show feature importances
     importances = model.feature_importances_
     feature_importance = pd.DataFrame({'feature': feature_names, 'importance': importances})
-    print("Feature Importances:")
+    print("\nFeature Importances:")
     print(feature_importance.sort_values(by='importance', ascending=False))
 
     # Save the model
     joblib.dump(model, output_path)
-    print(f"Model saved to {output_path}")
+    print(f"\nModel saved to {output_path}")
 
     return model
-
-def validate_model(model, training_set_path, validation_set_path, features_dir):
-    """Validate a trained model on the validation set.
-    
-    Evaluates the trained model's performance on the validation dataset and
-    prints classification metrics.
-    
-    Args:
-        model: Trained model with predict method.
-        training_set_path (str): Path to training set CSV file.
-        validation_set_path (str): Path to validation set CSV file.
-        features_dir (str): Directory containing feature CSV files.
-    """
-    _, _, X_val, y_val, _ = features_and_labels(training_set_path, validation_set_path, features_dir)
-
-    # Evaluate the model on the validation set
-    y_val_pred = model.predict(X_val)
-    print("Validation Classification Report:")
-    print(classification_report(y_val, y_val_pred))
-    print("Validation Accuracy:", accuracy_score(y_val, y_val_pred))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train teacher model for IFCB focus classification')
@@ -137,5 +126,4 @@ if __name__ == "__main__":
     parser.add_argument('output_path', help='Path where the teacher model will be saved')
     
     args = parser.parse_args()
-    model = train_random_forest(args.training_set_path, args.validation_set_path, args.features_dir, args.output_path)
-    validate_model(model, args.training_set_path, args.validation_set_path, args.features_dir)
+    model = train_and_validate_model(args.training_set_path, args.validation_set_path, args.features_dir, args.output_path)
