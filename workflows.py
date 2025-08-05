@@ -9,6 +9,17 @@ from feature_extraction import preprocess_image, extract_features
 
 
 def feature_extraction(ground_truth_csv, raw_data_dir, output_features_dir):
+    """Extract features from IFCB images and save to CSV files.
+    
+    Processes all PIDs listed in the ground truth CSV, extracting image features
+    from each ROI (Region of Interest) and saving them as individual CSV files
+    per PID in the output directory.
+    
+    Args:
+        ground_truth_csv (str): Path to CSV file containing PID identifiers.
+        raw_data_dir (str): Directory containing raw IFCB data files.
+        output_features_dir (str): Directory where feature CSV files will be saved.
+    """
     validation_set = pd.read_csv(ground_truth_csv)
     dd = DataDirectory(os.path.dirname(raw_data_dir), os.path.basename(raw_data_dir))
     pids = validation_set['pid'].tolist()
@@ -27,6 +38,16 @@ def feature_extraction(ground_truth_csv, raw_data_dir, output_features_dir):
         features_df.to_csv(os.path.join(output_features_dir, f"{pid}_features.csv"), float_format='%.5f', index=False)
 
 def split_true_labels(ground_truth_csv, train_csv, val_csv):
+    """Split ground truth data into training and validation sets.
+    
+    Randomly splits the ground truth dataset into training (66%) and validation
+    (34%) sets, ensuring reproducible splits with a fixed random seed.
+    
+    Args:
+        ground_truth_csv (str): Path to the ground truth CSV file.
+        train_csv (str): Path where the training set CSV will be saved.
+        val_csv (str): Path where the validation set CSV will be saved.
+    """
     truth = pd.read_csv(ground_truth_csv)
     # split 66/34 into training and validation
     train_set = truth.sample(frac=0.66, random_state=42)

@@ -134,6 +134,20 @@ def skip_image(image):
     return image.shape[0] < 50 or image.shape[1] < 50
 
 def batch_compute_features(image_list):
+    """Compute features for a batch of images.
+    
+    Processes a list of image paths, extracting features from each valid image
+    (skipping images smaller than 50x50 pixels).
+    
+    Args:
+        image_list (list): List of image file paths to process.
+        
+    Returns:
+        tuple: A tuple containing:
+            - features_list (list): List of feature value lists for each image.
+            - bin_id_list (list): List of bin IDs extracted from image filenames.
+            - feature_names (list): List of feature names.
+    """
     feature_names = None
     features_list = []
     bin_id_list = []
@@ -151,6 +165,16 @@ def batch_compute_features(image_list):
     return features_list, bin_id_list, feature_names
 
 def do_all_compute_features(good_dir, bad_dir, blurred_dir):
+    """Compute features for all images and save to CSV.
+    
+    Extracts features from good (in-focus), bad (out-of-focus), and blurred images,
+    combining them into a single labeled dataset saved as 'features.csv'.
+    
+    Args:
+        good_dir (str): Directory containing good (in-focus) images.
+        bad_dir (str): Directory containing bad (out-of-focus) images.
+        blurred_dir (str): Directory containing blurred images.
+    """
     good_features, good_bin_ids, feature_names = batch_compute_features(list_images(good_dir))
     bad_features, bad_bin_ids, _ = batch_compute_features(list_images(bad_dir))
     blurred_features, blurred_bin_ids, _ = batch_compute_features(list_images(blurred_dir))
@@ -173,6 +197,17 @@ def do_all_compute_features(good_dir, bad_dir, blurred_dir):
     combined_features.to_csv('features.csv', index=False)
 
 def train_model(good_dir, bad_dir, blurred_dir, output_dir):
+    """Train a Random Forest classifier for IFCB focus classification.
+    
+    Loads or computes features from image directories, trains a Random Forest model,
+    evaluates its performance, and saves the trained model.
+    
+    Args:
+        good_dir (str): Directory containing good (in-focus) images.
+        bad_dir (str): Directory containing bad (out-of-focus) images.
+        blurred_dir (str): Directory containing blurred images.
+        output_dir (str): Directory where the trained model will be saved.
+    """
     if not os.path.exists('features.csv'):
         do_all_compute_features(good_dir, bad_dir, blurred_dir)
 

@@ -14,6 +14,18 @@ from train_teacher_model import features_and_labels
 from score_bins import STUDENT_MODEL_FEATURES
 
 def feature_ranking(model):
+    """Rank features by combining importance and speed metrics.
+    
+    Creates a composite ranking of features based on both their importance in the
+    model and their computational speed, allowing selection of features that are
+    both predictive and fast to compute.
+    
+    Args:
+        model: Trained model with feature_importances_ attribute.
+        
+    Returns:
+        list: List of feature names ranked by combined importance and speed score.
+    """
     speed = rank_feature_speed()
     importances = model.feature_importances_
     feature_importance = pd.DataFrame({'feature': feature_names(), 'importance': importances})
@@ -34,6 +46,15 @@ def feature_ranking(model):
     return candidate_ranking
 
 def search_for_features(teacher_model_path, student_model_path):
+    """Search for optimal number of features for student model.
+    
+    Tests different numbers of top-ranked features to find the optimal subset
+    for the student model, using knowledge distillation from the teacher model.
+    
+    Args:
+        teacher_model_path (str): Path to the trained teacher model file.
+        student_model_path (str): Path where the final student model will be saved.
+    """
     X_train, y_train, X_val, y_val, feature_names = features_and_labels()
 
     # Load the teacher model
@@ -65,6 +86,15 @@ def search_for_features(teacher_model_path, student_model_path):
     joblib.dump(model, student_model_path)
 
 def train_student_model(teacher_model_path, student_model_path):
+    """Train a student model using knowledge distillation from teacher model.
+    
+    Creates a smaller, faster student model that learns to mimic the teacher's
+    predictions using only a subset of the most important and fastest features.
+    
+    Args:
+        teacher_model_path (str): Path to the trained teacher model file.
+        student_model_path (str): Path where the student model will be saved.
+    """
     X_train, y_train, X_val, y_val, feature_names = features_and_labels()
 
     # Load the teacher model

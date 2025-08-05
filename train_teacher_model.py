@@ -10,8 +10,19 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 
 def assemble_features(bin_set, features_dir):
-    """
-    Assemble features for a given bin set.
+    """Assemble features for a given bin set.
+    
+    Loads feature CSV files for each PID in the bin set and combines them
+    into a single feature matrix with labels.
+    
+    Args:
+        bin_set (pd.DataFrame): DataFrame containing 'pid' and 'true_label' columns.
+        features_dir (str): Directory containing individual feature CSV files.
+        
+    Returns:
+        tuple: A tuple containing:
+            - features_array (np.ndarray): Combined feature matrix with labels.
+            - feature_names (list): List of feature column names.
     """
     bin_pids = bin_set['pid'].tolist()
     labels = bin_set['true_label'].tolist()
@@ -26,6 +37,24 @@ def assemble_features(bin_set, features_dir):
     return pd.concat(features, ignore_index=True).values, bin_features.columns[:-1].tolist()
 
 def features_and_labels(training_set_path, validation_set_path, features_dir):
+    """Load and prepare training and validation features and labels.
+    
+    Reads training and validation CSV files, assembles features from individual
+    feature files, and separates features from labels for model training.
+    
+    Args:
+        training_set_path (str): Path to training set CSV file.
+        validation_set_path (str): Path to validation set CSV file.
+        features_dir (str): Directory containing feature CSV files.
+        
+    Returns:
+        tuple: A tuple containing:
+            - X_train (np.ndarray): Training features.
+            - y_train (np.ndarray): Training labels.
+            - X_val (np.ndarray): Validation features.
+            - y_val (np.ndarray): Validation labels.
+            - feature_names (list): List of feature names.
+    """
     training_set = pd.read_csv(training_set_path)
     validation_set = pd.read_csv(validation_set_path)
     
@@ -41,6 +70,20 @@ def features_and_labels(training_set_path, validation_set_path, features_dir):
     return X_train, y_train, X_val, y_val, feature_names
 
 def train_random_forest(training_set_path, validation_set_path, features_dir, output_path):
+    """Train a Random Forest teacher model for IFCB focus classification.
+    
+    Loads training data, trains a Random Forest classifier, evaluates performance,
+    and saves the trained model for use as a teacher in knowledge distillation.
+    
+    Args:
+        training_set_path (str): Path to training set CSV file.
+        validation_set_path (str): Path to validation set CSV file.
+        features_dir (str): Directory containing feature CSV files.
+        output_path (str): Path where the trained model will be saved.
+        
+    Returns:
+        RandomForestClassifier: The trained Random Forest model.
+    """
     X_train, y_train, _, _, feature_names = features_and_labels(training_set_path, validation_set_path, features_dir)
 
     # Split training data into training and validation sets
@@ -67,6 +110,17 @@ def train_random_forest(training_set_path, validation_set_path, features_dir, ou
     return model
 
 def validate_model(model, training_set_path, validation_set_path, features_dir):
+    """Validate a trained model on the validation set.
+    
+    Evaluates the trained model's performance on the validation dataset and
+    prints classification metrics.
+    
+    Args:
+        model: Trained model with predict method.
+        training_set_path (str): Path to training set CSV file.
+        validation_set_path (str): Path to validation set CSV file.
+        features_dir (str): Directory containing feature CSV files.
+    """
     _, _, X_val, y_val, _ = features_and_labels(training_set_path, validation_set_path, features_dir)
 
     # Evaluate the model on the validation set

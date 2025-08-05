@@ -4,6 +4,16 @@ import os
 import argparse
 
 def download_bin(pid, url_prefix, raw_data_dir):
+    """Download IFCB bin files (.hdr, .adc, .roi) for a given PID.
+    
+    Downloads the three required IFCB files for a bin if they don't already exist
+    locally. Skips files that are already present in the raw data directory.
+    
+    Args:
+        pid (str): The bin PID identifier.
+        url_prefix (str): The base URL prefix for downloading files.
+        raw_data_dir (str): Directory where raw data files will be saved.
+    """
     for ext in ['.hdr', '.adc', '.roi']:
         path = os.path.join(raw_data_dir, f"{pid}{ext}")
         if os.path.exists(path):
@@ -18,6 +28,16 @@ def download_bin(pid, url_prefix, raw_data_dir):
             print(f"Failed to download {url}")
 
 def download_validation_set(validation_csv, url_prefix, raw_data_dir):
+    """Download all IFCB bin files for PIDs listed in a validation CSV.
+    
+    Reads a CSV file containing PID identifiers and downloads the corresponding
+    IFCB bin files (.hdr, .adc, .roi) from the specified URL prefix.
+    
+    Args:
+        validation_csv (str): Path to CSV file containing 'pid' column.
+        url_prefix (str): The base URL prefix for downloading files.
+        raw_data_dir (str): Directory where raw data files will be saved.
+    """
     validation_set = pd.read_csv(validation_csv)
     
     for index, row in validation_set.iterrows():
