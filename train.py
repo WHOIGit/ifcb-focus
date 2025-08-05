@@ -6,18 +6,18 @@ import numpy as np
 import pandas as pd
 import joblib
 from skimage.io import imread
-from skimage.filters import sobel
 from skimage.util import img_as_float
-from scipy.ndimage import convolve
-from skimage import exposure, color
-from skimage.filters import gaussian
+from skimage import exposure
 from skimage.transform import resize
-from scipy.ndimage import gaussian_filter
-from skimage import feature
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn.ensemble import RandomForestClassifier
 from tqdm import tqdm
+
+from feature_extraction import (
+    sum_modified_laplacian, tenengrad_sharpness, brenner_gradient,
+    dog_variance, edge_density, local_std, mad
+)
 
 def list_images(folder):
     return sorted([os.path.join(folder, f) for f in sorted(os.listdir(folder)) if f.endswith('.png')])
@@ -53,50 +53,7 @@ def preprocess_image(image, target_size=None, enhance_contrast=True):
 
     return image.astype(np.float32)
 
-def sum_modified_laplacian(image):
-    """Compute the Sum Modified Laplacian (SML) sharpness."""
-    kernel_h = np.array([[0, 0, 0],
-                         [-1, 2, -1],
-                         [0, 0, 0]])
-    kernel_v = np.array([[0, -1, 0],
-                         [0,  2, 0],
-                         [0, -1, 0]])
-    lap_h = convolve(image, kernel_h, mode='reflect')
-    lap_v = convolve(image, kernel_v, mode='reflect')
-    return np.sum(np.abs(lap_h) + np.abs(lap_v))
 
-def tenengrad_sharpness(image):
-    """Compute Tenengrad sharpness using Sobel gradient magnitude."""
-    sobel_grad = sobel(image)
-    return np.mean(sobel_grad ** 2)
-
-def brenner_gradient(image):
-    """Brenner's gradient — measures vertical detail."""
-    return np.sum((image[:, :-2] - image[:, 2:]) ** 2)
-
-def dog_variance(image, sigma1=1, sigma2=2):
-    """Difference of Gaussians (DoG) variance."""
-    blur1 = gaussian_filter(image, sigma1)
-    blur2 = gaussian_filter(image, sigma2)
-    dog = blur1 - blur2
-    return np.var(dog)
-
-def edge_density(image, sigma=1.0):
-    """Edge density via Canny edge detector."""
-    edges = feature.canny(image, sigma=sigma)
-    return np.sum(edges) / edges.size
-
-def local_std(image, window=5):
-    """Local standard deviation in a sliding window."""
-    shape = (image.shape[0] - window + 1, image.shape[1] - window + 1, window, window)
-    strides = image.strides + image.strides
-    windows = np.lib.stride_tricks.as_strided(image, shape=shape, strides=strides)
-    local_stds = windows.std(axis=(-1, -2))
-    return np.mean(local_stds)
-
-def mad(image):
-    median = np.median(image)
-    return np.median(np.abs(image - median))
 
 def compute_features(image):
     """
