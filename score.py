@@ -154,7 +154,12 @@ def process_single_bin(directory, pid, model, top_n=100):
     b = dd[pid]
     score_and_print(b, model, top_n=top_n)
 
-if __name__ == "__main__":
+def main():
+    """Main function for command-line interface.
+    
+    Parses command-line arguments and executes the appropriate scoring operation
+    (single bin, directory, or remote bin) based on the provided arguments.
+    """
     # support the following command line arguments:
     # host -- for remote bins
     # pid -- for the bin id
@@ -190,3 +195,6 @@ if __name__ == "__main__":
         print("Please provide a PID when using a host.")
     else:
         print("Please provide either a host and PID or a directory with bins.")
+
+if __name__ == "__main__":
+    main()
