@@ -1,4 +1,5 @@
 
+import argparse
 import joblib
 import os
 
@@ -11,8 +12,6 @@ from feature_extraction import rank_feature_speed, feature_names
 from train_teacher_model import features_and_labels
 
 from score_bins import STUDENT_MODEL_FEATURES
-
-DATA_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
 
 def feature_ranking(model):
     speed = rank_feature_speed()
@@ -34,11 +33,11 @@ def feature_ranking(model):
 
     return candidate_ranking
 
-def search_for_features():
+def search_for_features(teacher_model_path, student_model_path):
     X_train, y_train, X_val, y_val, feature_names = features_and_labels()
 
     # Load the teacher model
-    teacher_model = joblib.load(os.path.join(DATA_DIR, 'teacher_model.pkl'))
+    teacher_model = joblib.load(teacher_model_path)
 
     # Get the candidate ranking from the teacher model
     candidate_ranking = feature_ranking(teacher_model)
@@ -63,14 +62,13 @@ def search_for_features():
         print(f"{n},{accuracy:.4f}")
 
     # save the model
-    model_path = os.path.join(DATA_DIR, 'student_model.pkl')
-    joblib.dump(model, model_path)
+    joblib.dump(model, student_model_path)
 
-def train_student_model():
+def train_student_model(teacher_model_path, student_model_path):
     X_train, y_train, X_val, y_val, feature_names = features_and_labels()
 
     # Load the teacher model
-    teacher_model = joblib.load(os.path.join(DATA_DIR, 'teacher_model.pkl'))
+    teacher_model = joblib.load(teacher_model_path)
     
     y_train_proba = teacher_model.predict_proba(X_train)[:, 1]
     
@@ -100,8 +98,12 @@ def train_student_model():
     print(feature_importance.sort_values(by='importance', ascending=False))
 
     # save the model
-    model_path = os.path.join(DATA_DIR, 'slim_student_model.pkl')
-    joblib.dump(model, model_path)
+    joblib.dump(model, student_model_path)
 
 if __name__ == "__main__":
-    train_student_model()
+    parser = argparse.ArgumentParser(description='Train student model from teacher model')
+    parser.add_argument('teacher_model_path', help='Path to the teacher model file')
+    parser.add_argument('student_model_path', help='Path where the student model will be saved')
+    
+    args = parser.parse_args()
+    train_student_model(args.teacher_model_path, args.student_model_path)

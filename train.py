@@ -1,8 +1,10 @@
 import os
 import re
+import argparse
 
 import numpy as np
 import pandas as pd
+import joblib
 from skimage.io import imread
 from skimage.filters import sobel
 from skimage.util import img_as_float
@@ -14,9 +16,7 @@ from scipy.ndimage import gaussian_filter
 from skimage import feature
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
-
 from sklearn.ensemble import RandomForestClassifier
-
 from tqdm import tqdm
 
 def list_images(folder):
@@ -88,7 +88,6 @@ def edge_density(image, sigma=1.0):
 
 def local_std(image, window=5):
     """Local standard deviation in a sliding window."""
-    from skimage.util import view_as_windows
     shape = (image.shape[0] - window + 1, image.shape[1] - window + 1, window, window)
     strides = image.strides + image.strides
     windows = np.lib.stride_tricks.as_strided(image, shape=shape, strides=strides)
@@ -134,54 +133,48 @@ def skip_image(image):
     """
     return image.shape[0] < 50 or image.shape[1] < 50
 
-def main():
-    def do_all_compute_features():
-        BASE_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
+def batch_compute_features(image_list):
+    feature_names = None
+    features_list = []
+    bin_id_list = []
+    for image, image_id in load_images(image_list):
+        # enforce minimum size of 50x50
+        if skip_image(image):
+            continue
+        preprocessed_image = preprocess_image(image)
+        bin_id = re.sub(r'_\d+$', '', image_id)  # Remove trailing digits
+        features = compute_features(preprocessed_image)
+        features_list.append(list(features.values()))
+        if feature_names is None:
+            feature_names = list(features.keys())
+        bin_id_list.append(bin_id)
+    return features_list, bin_id_list, feature_names
 
-        good_dir = os.path.join(BASE_DIR, 'good')
-        bad_dir = os.path.join(BASE_DIR, 'bad')
-        blurred_dir = os.path.join(BASE_DIR, 'blurred')
+def do_all_compute_features(good_dir, bad_dir, blurred_dir):
+    good_features, good_bin_ids, feature_names = batch_compute_features(list_images(good_dir))
+    bad_features, bad_bin_ids, _ = batch_compute_features(list_images(bad_dir))
+    blurred_features, blurred_bin_ids, _ = batch_compute_features(list_images(blurred_dir))
 
-        def batch_compute_features(image_list):
-            feature_names = None
-            features_list = []
-            bin_id_list = []
-            for image, image_id in load_images(image_list):
-                # enforce minimum size of 50x50
-                if skip_image(image):
-                    continue
-                preprocessed_image = preprocess_image(image)
-                bin_id = re.sub(r'_\d+$', '', image_id)  # Remove trailing digits
-                features = compute_features(preprocessed_image)
-                features_list.append(list(features.values()))
-                if feature_names is None:
-                    feature_names = list(features.keys())
-                bin_id_list.append(bin_id)
-            return features_list, bin_id_list, feature_names
+    bin_ids = good_bin_ids + bad_bin_ids + blurred_bin_ids
 
-        good_features, good_bin_ids, feature_names = batch_compute_features(list_images(good_dir))
-        bad_features, bad_bin_ids, _ = batch_compute_features(list_images(bad_dir))
-        blurred_features, blurred_bin_ids, _ = batch_compute_features(list_images(blurred_dir))
+    # add blurred features to bad features
+    bad_features.extend(blurred_features)
+    #blurred_bin_ids = [f"{bid}_blurred" for bid in blurred_bin_ids]
+    # Create a DataFrame for the combined features
 
-        bin_ids = good_bin_ids + bad_bin_ids + blurred_bin_ids
+    good_features = pd.DataFrame(np.array(good_features), columns=feature_names)
+    bad_features = pd.DataFrame(np.array(bad_features), columns=feature_names)
 
-        # add blurred features to bad features
-        bad_features.extend(blurred_features)
-        #blurred_bin_ids = [f"{bid}_blurred" for bid in blurred_bin_ids]
-        # Create a DataFrame for the combined features
+    y = np.concatenate([np.ones(len(good_features)), np.zeros(len(bad_features))])
 
-        good_features = pd.DataFrame(np.array(good_features), columns=feature_names)
-        bad_features = pd.DataFrame(np.array(bad_features), columns=feature_names)
+    combined_features = pd.concat([good_features, bad_features], ignore_index=True)
+    combined_features['bin_id'] = bin_ids
+    combined_features['label'] = y.astype(int)
+    combined_features.to_csv('features.csv', index=False)
 
-        y = np.concatenate([np.ones(len(good_features)), np.zeros(len(bad_features))])
-
-        combined_features = pd.concat([good_features, bad_features], ignore_index=True)
-        combined_features['bin_id'] = bin_ids
-        combined_features['label'] = y.astype(int)
-        combined_features.to_csv('features.csv', index=False)
-
+def train_model(good_dir, bad_dir, blurred_dir, output_dir):
     if not os.path.exists('features.csv'):
-        do_all_compute_features()
+        do_all_compute_features(good_dir, bad_dir, blurred_dir)
 
     combined_features = pd.read_csv('features.csv', index_col=None)
 
@@ -194,7 +187,6 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
     # fit a random forest classifier
-
     rf_model = RandomForestClassifier(n_estimators=100, random_state=42, class_weight='balanced')
     rf_model.fit(X_train, y_train)
 
@@ -210,8 +202,7 @@ def main():
     print("Random Forest Accuracy:", accuracy_score(y_test, rf_y_pred))
 
     # save the model
-    import joblib
-    model_path = os.path.join('ifcb_focus_model.pkl')
+    model_path = os.path.join(output_dir, 'ifcb_focus_model.pkl')
     joblib.dump(rf_model, model_path)
 
     # now classify all images
@@ -231,4 +222,11 @@ def main():
     print(scores)
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Train IFCB focus classification model')
+    parser.add_argument('good_dir', help='Directory containing good (in-focus) images')
+    parser.add_argument('bad_dir', help='Directory containing bad (out-of-focus) images')
+    parser.add_argument('blurred_dir', help='Directory containing blurred images')
+    parser.add_argument('output_dir', help='Directory to save the trained model')
+    
+    args = parser.parse_args()
+    train_model(args.good_dir, args.bad_dir, args.blurred_dir, args.output_dir)

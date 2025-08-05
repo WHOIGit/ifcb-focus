@@ -1,17 +1,15 @@
 import requests
 import pandas as pd
 import os
+import argparse
 
-DATA_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
-URL_PREFIX = 'https://ifcb-data.whoi.edu/data/'
-
-def download_bin(pid):
+def download_bin(pid, url_prefix, raw_data_dir):
     for ext in ['.hdr', '.adc', '.roi']:
-        path = os.path.join(DATA_DIR, 'raw_data', f"{pid}{ext}")
+        path = os.path.join(raw_data_dir, f"{pid}{ext}")
         if os.path.exists(path):
             #print(f"File {path} already exists, skipping download.")
             continue
-        url = f"{URL_PREFIX}{pid}{ext}"
+        url = f"{url_prefix}{pid}{ext}"
         response = requests.get(url)
         if response.status_code == 200:
             with open(path, 'wb') as f:
@@ -19,9 +17,19 @@ def download_bin(pid):
         else:
             print(f"Failed to download {url}")
 
-validation_set = pd.read_csv(os.path.join(DATA_DIR, 'validation.csv'))
+def download_validation_set(validation_csv, url_prefix, raw_data_dir):
+    validation_set = pd.read_csv(validation_csv)
+    
+    for index, row in validation_set.iterrows():
+        pid = row['pid']
+        print(pid)
+        download_bin(pid, url_prefix, raw_data_dir)
 
-for index, row in validation_set.iterrows():
-    pid = row['pid']
-    print(pid)
-    download_bin(pid)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Download validation set files')
+    parser.add_argument('validation_csv', help='Path to validation CSV file')
+    parser.add_argument('url_prefix', help='URL prefix for downloading files')
+    parser.add_argument('raw_data_dir', help='Directory to save raw data files')
+    
+    args = parser.parse_args()
+    download_validation_set(args.validation_csv, args.url_prefix, args.raw_data_dir)

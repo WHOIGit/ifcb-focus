@@ -1,20 +1,15 @@
 import os
+import argparse
 import joblib
 
 import numpy as np
+import pandas as pd
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
 
-import pandas as pd
-
-DATA_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
-
-training_set = pd.read_csv(os.path.join(DATA_DIR, 'train.csv'))
-validation_set = pd.read_csv(os.path.join(DATA_DIR, 'validation.csv'))
-
-def assemble_features(bin_set):
+def assemble_features(bin_set, features_dir):
     """
     Assemble features for a given bin set.
     """
@@ -22,7 +17,7 @@ def assemble_features(bin_set):
     labels = bin_set['true_label'].tolist()
     features = []
     for pid, label in zip(bin_pids, labels):
-        features_path = os.path.join(DATA_DIR, 'features', f"{pid}_features.csv")
+        features_path = os.path.join(features_dir, f"{pid}_features.csv")
         bin_features = pd.read_csv(features_path)
         bin_features.pop('pid')
         bin_features['label'] = label
@@ -30,9 +25,12 @@ def assemble_features(bin_set):
 
     return pd.concat(features, ignore_index=True).values, bin_features.columns[:-1].tolist()
 
-def features_and_labels():
-    train, feature_names = assemble_features(training_set)
-    val, _ = assemble_features(validation_set)
+def features_and_labels(training_set_path, validation_set_path, features_dir):
+    training_set = pd.read_csv(training_set_path)
+    validation_set = pd.read_csv(validation_set_path)
+    
+    train, feature_names = assemble_features(training_set, features_dir)
+    val, _ = assemble_features(validation_set, features_dir)
 
     X_train = train[:, :-1]  # All columns except the last one
     y_train = train[:, -1]   # The last column is the label
@@ -42,9 +40,8 @@ def features_and_labels():
 
     return X_train, y_train, X_val, y_val, feature_names
 
-def train_random_forest():
-
-    X_train, y_train, _, _, feature_names = features_and_labels()
+def train_random_forest(training_set_path, validation_set_path, features_dir, output_path):
+    X_train, y_train, _, _, feature_names = features_and_labels(training_set_path, validation_set_path, features_dir)
 
     # Split training data into training and validation sets
     X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
@@ -64,14 +61,13 @@ def train_random_forest():
     print(feature_importance.sort_values(by='importance', ascending=False))
 
     # Save the model
-    model_path = os.path.join(DATA_DIR, 'teacher_model.pkl')
-    joblib.dump(model, model_path)
-    print(f"Model saved to {model_path}")
+    joblib.dump(model, output_path)
+    print(f"Model saved to {output_path}")
 
     return model
 
-def validate_model(model):
-    _, _, X_val, y_val, _ = features_and_labels()
+def validate_model(model, training_set_path, validation_set_path, features_dir):
+    _, _, X_val, y_val, _ = features_and_labels(training_set_path, validation_set_path, features_dir)
 
     # Evaluate the model on the validation set
     y_val_pred = model.predict(X_val)
@@ -80,6 +76,12 @@ def validate_model(model):
     print("Validation Accuracy:", accuracy_score(y_val, y_val_pred))
 
 if __name__ == "__main__":
-    X_train, y_train, X_val, y_val, feature_names = features_and_labels()
-    model = joblib.load(os.path.join(DATA_DIR, 'teacher_model.pkl'))
-    validate_model(model)
+    parser = argparse.ArgumentParser(description='Train teacher model for IFCB focus classification')
+    parser.add_argument('training_set_path', help='Path to the training set CSV file')
+    parser.add_argument('validation_set_path', help='Path to the validation set CSV file')
+    parser.add_argument('features_dir', help='Directory containing feature CSV files')
+    parser.add_argument('output_path', help='Path where the teacher model will be saved')
+    
+    args = parser.parse_args()
+    model = train_random_forest(args.training_set_path, args.validation_set_path, args.features_dir, args.output_path)
+    validate_model(model, args.training_set_path, args.validation_set_path, args.features_dir)
