@@ -9,7 +9,7 @@ from sklearn.metrics import classification_report, accuracy_score
 
 import pandas as pd
 
-DATA_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
+DATA_DIR = os.environ.get('IFCB_DATA_DIR', './data')
 
 training_set = pd.read_csv(os.path.join(DATA_DIR, 'train.csv'))
 validation_set = pd.read_csv(os.path.join(DATA_DIR, 'validation.csv'))

@@ -17,7 +17,7 @@ def blur_image(image, sigma=1):
     """
     return gaussian(image, sigma=sigma, preserve_range=True)
 
-BASE_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
+BASE_DIR = os.environ.get('IFCB_DATA_DIR', './data')
 
 good_dir = os.path.join(BASE_DIR, 'good_to_blur')
 blurred_dir = os.path.join(BASE_DIR, 'blurred')

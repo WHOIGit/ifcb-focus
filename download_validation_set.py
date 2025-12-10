@@ -2,8 +2,9 @@ import requests
 import pandas as pd
 import os
 
-DATA_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
-URL_PREFIX = 'https://ifcb-data.whoi.edu/data/'
+DATA_DIR = os.environ.get('IFCB_DATA_DIR', './data')
+IFCB_HOST = os.environ.get('IFCB_DASHBOARD_HOST', 'localhost:8000')
+URL_PREFIX = f'https://{IFCB_HOST}/data/'
 
 def download_bin(pid):
     for ext in ['.hdr', '.adc', '.roi']:

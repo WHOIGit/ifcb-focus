@@ -136,7 +136,7 @@ def skip_image(image):
 
 def main():
     def do_all_compute_features():
-        BASE_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
+        BASE_DIR = os.environ.get('IFCB_DATA_DIR', './data')
 
         good_dir = os.path.join(BASE_DIR, 'good')
         bad_dir = os.path.join(BASE_DIR, 'bad')

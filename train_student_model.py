@@ -12,7 +12,7 @@ from train_teacher_model import features_and_labels
 
 from score_bins import STUDENT_MODEL_FEATURES
 
-DATA_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
+DATA_DIR = os.environ.get('IFCB_DATA_DIR', './data')
 
 def feature_ranking(model):
     speed = rank_feature_speed()

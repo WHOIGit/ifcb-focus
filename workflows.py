@@ -7,8 +7,7 @@ from ifcb import DataDirectory
 from feature_extraction import preprocess_image, extract_features
 
 
-DATA_DIR = '/Users/jfutrelle/Data/ifcb-data/focus'
-RAW_DATA_DIR = os.path.join(DATA_DIR, 'raw_data')
+DATA_DIR = os.environ.get('IFCB_DATA_DIR', './data')
 
 
 def feature_extraction():
