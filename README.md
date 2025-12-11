@@ -23,6 +23,24 @@ pip install -e .
 4. **Pseudo-Labeling**: Use the teacher model to generate additional labeled data from unlabeled datasets.
 5. **Data Augmentation**: Leverage the augmentation pipeline to create diverse training datasets with simulated blurry images.
 
+### Running Inference
+
+```python
+from ifcb import DataDirectory
+import joblib
+from ifcb_focus import score_bin
+
+# Load bin data
+dd = DataDirectory('/path/to/raw_data')
+bin_data = dd['D20130823T160901_IFCB010']
+
+# Load model and score
+model = joblib.load('slim_student_model.pkl')
+score = score_bin(bin_data, model)
+
+print(f'Bin focus score: {score:.4f}')
+```
+
 ### Running the Model
 
 1. Prepare your IFCB images and extract features using the feature extractor.
