@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ifcb-focus"
+version = "0.1.0"
+description = "Machine learning framework for detecting blurry images from IFCB instruments"
+readme = "README.md"
+requires-python = ">=3.11"
+
+dependencies = [
+    "pandas",
+    "scikit-image",
+    "Pillow",
+    "matplotlib",
+    "tqdm",
+    "scikit-learn",
+    "seaborn",
+    "PyWavelets",
+    "pyifcb @ git+https://github.com/joefutrelle/pyifcb.git@v1.2.1",
+    "joblib",
+    "scipy",
+    "requests",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ifcb_focus"]
