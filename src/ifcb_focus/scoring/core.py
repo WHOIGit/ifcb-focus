@@ -13,7 +13,7 @@ from ifcb_focus.features import extract_features, preprocess_image
 from ifcb_focus.features.constants import STUDENT_MODEL_FEATURES
 
 
-def score_bin(b, model, confidence_threshold=0.1, top_n=200, verbose=False, cache_dir=None):
+def score_bin(b, model, confidence_threshold=0.1, top_n=200, verbose=False, cache_dir=None, features_to_use=None):
     """
     Score a single IFCB bin for focus quality.
 
@@ -25,6 +25,7 @@ def score_bin(b, model, confidence_threshold=0.1, top_n=200, verbose=False, cach
         top_n (int): Number of largest ROIs to analyze. Default is 200.
         verbose (bool): Whether to print scoring details. Default is False.
         cache_dir (str, optional): Directory to cache extracted features.
+        features_to_use (list, optional): Feature names to extract. If None, uses STUDENT_MODEL_FEATURES.
 
     Returns:
         float: Bin score between 0 and 1, where higher values indicate better focus.
@@ -43,7 +44,7 @@ def score_bin(b, model, confidence_threshold=0.1, top_n=200, verbose=False, cach
         >>> score = score_bin(bin_data, model)
         >>> print(f'Bin score: {score:.4f}')
     """
-    X = extract_slim_features(b, top_n=top_n, cache_dir=cache_dir).drop(columns=['pid']).values
+    X = extract_slim_features(b, top_n=top_n, cache_dir=cache_dir, features_to_use=features_to_use).drop(columns=['pid']).values
     if X.shape[0] == 0:
         return 0.0
     y = model.predict(X)
@@ -129,11 +130,8 @@ def score_remote_bin(host, pid, model, features=None):
         >>> score = score_remote_bin('ifcb-data.whoi.edu', 'D20230101T120000_IFCB123', model)
         >>> print(f'Remote bin score: {score:.4f}')
     """
-    if features is None:
-        features = STUDENT_MODEL_FEATURES
-
     with open_url(f'https://{host}/data/{pid}.adc') as b:
-        return score_bin(b, model)
+        return score_bin(b, model, features_to_use=features)
 
 
 def score_directory(data_dir, model, features=None, verbose=True, cache_dir=None):
@@ -162,14 +160,11 @@ def score_directory(data_dir, model, features=None, verbose=True, cache_dir=None
         >>> print(results)
         >>> results.to_csv('scores.csv', index=False)
     """
-    if features is None:
-        features = STUDENT_MODEL_FEATURES
-
     dd = DataDirectory(data_dir)
     results = []
 
     def process_bin(b):
-        score = score_bin(b, model, verbose=verbose, cache_dir=cache_dir)
+        score = score_bin(b, model, verbose=verbose, cache_dir=cache_dir, features_to_use=features)
         return {
             'pid': b.lid,
             'score': score,
