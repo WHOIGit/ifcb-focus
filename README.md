@@ -9,6 +9,12 @@ This repository provides a machine learning framework for detecting blurry image
 - **Knockout Voting Ensemble**: Implements an ensemble of models trained on subsets of features, improving robustness and generalization.
 - **Augmentation Pipeline**: A pipeline for blurring images to augment training sets, enhancing the model's generalization.
 
+## Installation
+
+```bash
+pip install -e .
+```
+
 ## Usage
 
 1. **Feature Extraction**: Use the feature extraction module to process IFCB images and generate feature sets.
@@ -16,6 +22,24 @@ This repository provides a machine learning framework for detecting blurry image
 3. **Inference**: Apply the trained ensemble model to classify new IFCB images as blurry or non-blurry.
 4. **Pseudo-Labeling**: Use the teacher model to generate additional labeled data from unlabeled datasets.
 5. **Data Augmentation**: Leverage the augmentation pipeline to create diverse training datasets with simulated blurry images.
+
+### Running Inference
+
+```python
+from ifcb import DataDirectory
+import joblib
+from ifcb_focus import score_bin
+
+# Load bin data
+dd = DataDirectory('/path/to/raw_data')
+bin_data = dd['D20130823T160901_IFCB010']
+
+# Load model and score
+model = joblib.load('slim_student_model.pkl')
+score = score_bin(bin_data, model)
+
+print(f'Bin focus score: {score:.4f}')
+```
 
 ### Running the Model
 
