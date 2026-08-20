@@ -8,8 +8,8 @@ and data splitting.
 import os
 import pandas as pd
 from tqdm import tqdm
-from ifcb import DataDirectory
 
+from ifcb_focus.data import data_directory, open_bin
 from ifcb_focus.features import preprocess_image, extract_features
 
 
@@ -33,7 +33,7 @@ def feature_extraction(data_dir=None):
         data_dir = os.environ.get('IFCB_DATA_DIR', './data')
 
     validation_set = pd.read_csv(os.path.join(data_dir, 'ground_truth.csv'))
-    dd = DataDirectory(data_dir, 'raw_data')
+    dd = data_directory(data_dir, include=['data', 'raw_data'])
     pids = validation_set['pid'].tolist()
 
     # Create features directory if it doesn't exist
@@ -41,7 +41,7 @@ def feature_extraction(data_dir=None):
     os.makedirs(features_dir, exist_ok=True)
 
     for pid in pids:
-        b = dd[pid]
+        b = open_bin(dd, pid)
         roi_numbers = list(b.images.keys())
         features = []
         for roi in tqdm(roi_numbers, desc=pid):

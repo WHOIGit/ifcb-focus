@@ -11,7 +11,6 @@ This package provides tools for:
 
 Example:
     >>> import ifcb_focus
-    >>> from ifcb import DataDirectory
     >>> import joblib
     >>>
     >>> # Extract features from an image
@@ -21,14 +20,22 @@ Example:
     >>>
     >>> # Score a bin
     >>> model = joblib.load('model.pkl')
-    >>> dd = DataDirectory('/path/to/data')
-    >>> bin_data = dd['bin_id']
+    >>> bin_data = ifcb_focus.open_bin('/path/to/data', 'bin_id')
     >>> score = ifcb_focus.score_bin(bin_data, model)
+
+Raw data access is provided by ifcbkit, wrapped by :mod:`ifcb_focus.data`.
 """
 
 __version__ = "0.1.0"
 
 # Import public API from submodules
+from .data import (
+    FocusBin,
+    data_directory,
+    open_bin,
+    open_remote_bin,
+    iter_bins,
+)
 from .features import (
     extract_features,
     preprocess_image,
@@ -54,6 +61,12 @@ from .training import (
 __all__ = [
     # Version
     '__version__',
+    # Data access
+    'FocusBin',
+    'data_directory',
+    'open_bin',
+    'open_remote_bin',
+    'iter_bins',
     # Features
     'extract_features',
     'preprocess_image',

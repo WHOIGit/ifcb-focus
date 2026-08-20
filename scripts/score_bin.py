@@ -10,8 +10,8 @@ import sys
 import argparse
 import os
 import joblib
-from ifcb import DataDirectory
 
+from ifcb_focus.data import data_directory, iter_bins, open_bin
 from ifcb_focus.scoring import score_bin, score_remote_bin
 
 
@@ -66,16 +66,16 @@ def main():
 
     elif args.directory and args.pid:
         # Score specific bin from local directory
-        dd = DataDirectory(args.directory)
-        b = dd[args.pid]
+        dd = data_directory(args.directory)
+        b = open_bin(dd, args.pid)
         score = score_bin(b, model, top_n=args.top_n, verbose=args.verbose)
         print(f'{b.lid},{score:.4f}')
 
     elif args.directory:
         # Score all bins in directory
-        dd = DataDirectory(args.directory)
+        dd = data_directory(args.directory)
         print('bin_id,score')
-        for b in dd:
+        for b in iter_bins(dd):
             score = score_bin(b, model, top_n=args.top_n, verbose=args.verbose)
             print(f'{b.lid},{score:.4f}')
 
