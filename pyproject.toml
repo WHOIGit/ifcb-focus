@@ -18,7 +18,7 @@ dependencies = [
     "scikit-learn",
     "seaborn",
     "PyWavelets",
-    "pyifcb @ git+https://github.com/joefutrelle/pyifcb.git@v1.2.1",
+    "ifcbkit @ git+https://github.com/WHOIGit/ifcbkit.git@v0.3.1",
     "joblib",
     "scipy",
     "requests",

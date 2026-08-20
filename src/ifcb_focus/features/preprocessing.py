@@ -1,51 +1,51 @@
 """
-Image preprocessing utilities for IFCB focus detection.
+Image preprocessing for IFCB focus detection.
+
+Provides the standard preprocessing pipeline for IFCB ROI images: float
+normalization, adaptive histogram equalization, and resizing.
 """
 
 import numpy as np
-from skimage import exposure
 from skimage.util import img_as_float
+from skimage.exposure import equalize_adapthist
 from skimage.transform import resize
 
 
-def preprocess_image(image, target_size=None, enhance_contrast=True, clip_limit=0.03):
+def preprocess_image(image, target_size=(512, 512), dtype='float32'):
     """
-    Preprocess the image: normalize, enhance contrast, and optionally resize.
+    Preprocess an image for feature extraction.
 
-    This function consolidates preprocessing logic from both feature_extraction.py
-    and train.py to provide a unified interface with backward compatibility.
+    Applies float normalization, adaptive histogram equalization, and resizing.
+    Accepts a ``PIL.Image`` or a ``numpy.ndarray`` (2D grayscale or 3D RGB);
+    any non-array input is normalized to a numpy array first. This is the
+    adapter boundary between ``ifcbkit`` (which yields PIL images) and the
+    numpy/skimage feature pipeline.
 
-    Parameters:
-        image (ndarray): Input image (2D grayscale or 3D RGB).
-        target_size (tuple, optional): Optional (height, width) to resize the image.
-            If None (default), no resizing is performed.
-        enhance_contrast (bool): Whether to apply adaptive histogram equalization.
-            Default is True.
-        clip_limit (float): Clipping limit for CLAHE (Contrast Limited Adaptive
-            Histogram Equalization). Default is 0.03.
+    Args:
+        image: Input image (PIL.Image or ndarray).
+        target_size (tuple): Target (height, width). Default (512, 512).
+        dtype (str): Output dtype ('float32', 'float64', 'float16').
 
     Returns:
-        ndarray: Preprocessed 2D float32 image normalized to [0, 1].
-
-    Examples:
-        >>> # Simple preprocessing (matches feature_extraction.py behavior)
-        >>> processed = preprocess_image(image)
-
-        >>> # With resizing (matches train.py behavior)
-        >>> processed = preprocess_image(image, target_size=(256, 256))
-
-        >>> # Without contrast enhancement
-        >>> processed = preprocess_image(image, enhance_contrast=False)
+        numpy.ndarray: Preprocessed image with the specified dtype.
     """
-    # Normalize to [0, 1] float
+    if dtype not in ['float32', 'float64', 'float16']:
+        raise ValueError(f"Unsupported dtype: {dtype}. Use 'float32', 'float64', or 'float16'.")
+
+    # Adapter boundary: normalize PIL images (and arrays) to numpy.
+    image = np.asarray(image)
+
+    # Convert to float and normalize to [0, 1]
     image = img_as_float(image)
 
-    # Contrast enhancement
-    if enhance_contrast:
-        image = exposure.equalize_adapthist(image, clip_limit=clip_limit)
+    # Apply adaptive histogram equalization
+    image = equalize_adapthist(image)
 
-    # Optional resizing
-    if target_size is not None:
-        image = resize(image, target_size, anti_aliasing=True, preserve_range=True)
+    # Resize to target dimensions
+    image = resize(image, target_size, anti_aliasing=True)
 
-    return image.astype(np.float32)
+    return image.astype(
+        np.float32 if dtype == 'float32'
+        else np.float64 if dtype == 'float64'
+        else np.float16
+    )

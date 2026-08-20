@@ -26,17 +26,16 @@ pip install -e .
 ### Running Inference
 
 ```python
-from ifcb import DataDirectory
+from ifcbkit import SyncIfcbDataDirectory
 import joblib
 from ifcb_focus import score_bin
 
-# Load bin data
-dd = DataDirectory('/path/to/raw_data')
-bin_data = dd['D20130823T160901_IFCB010']
+# Build a data directory over a root of IFCB raw filesets
+dd = SyncIfcbDataDirectory('/path/to/raw_data')
 
-# Load model and score
+# Load model and score a bin
 model = joblib.load('slim_student_model.pkl')
-score = score_bin(bin_data, model)
+score = score_bin(dd, 'D20130823T160901_IFCB010', model)
 
 print(f'Bin focus score: {score:.4f}')
 ```

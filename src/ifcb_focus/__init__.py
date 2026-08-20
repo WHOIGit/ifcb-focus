@@ -11,19 +11,18 @@ This package provides tools for:
 
 Example:
     >>> import ifcb_focus
-    >>> from ifcb import DataDirectory
+    >>> from ifcbkit import SyncIfcbDataDirectory
     >>> import joblib
     >>>
-    >>> # Extract features from an image
+    >>> # Extract features from an image (ndarray or PIL)
     >>> image = ...  # Load your image
     >>> processed = ifcb_focus.preprocess_image(image)
     >>> features = ifcb_focus.extract_features(processed)
     >>>
     >>> # Score a bin
     >>> model = joblib.load('model.pkl')
-    >>> dd = DataDirectory('/path/to/data')
-    >>> bin_data = dd['bin_id']
-    >>> score = ifcb_focus.score_bin(bin_data, model)
+    >>> dd = SyncIfcbDataDirectory('/path/to/data')
+    >>> score = ifcb_focus.score_bin(dd, 'bin_id', model)
 """
 
 __version__ = "0.1.0"
@@ -38,7 +37,6 @@ from .features import (
 from .scoring import (
     score_bin,
     extract_slim_features,
-    score_remote_bin,
     score_directory,
 )
 from .workflows import (
@@ -62,7 +60,6 @@ __all__ = [
     # Scoring
     'score_bin',
     'extract_slim_features',
-    'score_remote_bin',
     'score_directory',
     # Workflows
     'feature_extraction',
