@@ -6,4 +6,4 @@ tqdm
 scikit-learn
 seaborn
 PyWavelets
-git+https://github.com/joefutrelle/pyifcb.git
+git+https://github.com/WHOIGit/ifcbkit.git

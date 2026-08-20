@@ -7,8 +7,8 @@ using trained focus detection models.
 
 import os
 import pandas as pd
-from ifcb import DataDirectory, open_url
 
+from ifcb_focus.data import data_directory, iter_bins, open_remote_bin
 from ifcb_focus.features import extract_features, preprocess_image
 from ifcb_focus.features.constants import STUDENT_MODEL_FEATURES
 
@@ -18,7 +18,7 @@ def score_bin(b, model, confidence_threshold=0.1, top_n=200, verbose=False, cach
     Score a single IFCB bin for focus quality.
 
     Args:
-        b: IFCB bin object (from pyifcb library).
+        b: IFCB bin object (see ifcb_focus.data.FocusBin).
         model: Trained model (sklearn RandomForestRegressor) for prediction.
         confidence_threshold (float): Threshold for determining good/bad predictions.
             Default is 0.1.
@@ -34,13 +34,12 @@ def score_bin(b, model, confidence_threshold=0.1, top_n=200, verbose=False, cach
             - bad = count of predictions < confidence_threshold
 
     Example:
-        >>> from ifcb import DataDirectory
         >>> import joblib
+        >>> from ifcb_focus.data import open_bin
         >>> from ifcb_focus.scoring import score_bin
         >>>
         >>> model = joblib.load('model.pkl')
-        >>> dd = DataDirectory('/path/to/data')
-        >>> bin_data = dd['bin_id']
+        >>> bin_data = open_bin('/path/to/data', 'bin_id')
         >>> score = score_bin(bin_data, model)
         >>> print(f'Bin score: {score:.4f}')
     """
@@ -62,7 +61,7 @@ def extract_slim_features(b, top_n=200, cache_dir=None, features_to_use=None):
     Extract slim feature set from an IFCB bin.
 
     Args:
-        b: IFCB bin object (from pyifcb library).
+        b: IFCB bin object (see ifcb_focus.data.FocusBin).
         top_n (int): Number of largest ROIs to process. Default is 200.
         cache_dir (str, optional): Directory to cache/load features. If specified,
             features will be saved to and loaded from this directory.
@@ -73,11 +72,10 @@ def extract_slim_features(b, top_n=200, cache_dir=None, features_to_use=None):
         pandas.DataFrame: DataFrame with columns ['pid'] + feature names.
 
     Example:
-        >>> from ifcb import DataDirectory
+        >>> from ifcb_focus.data import open_bin
         >>> from ifcb_focus.scoring import extract_slim_features
         >>>
-        >>> dd = DataDirectory('/path/to/data')
-        >>> bin_data = dd['bin_id']
+        >>> bin_data = open_bin('/path/to/data', 'bin_id')
         >>> features_df = extract_slim_features(bin_data, top_n=100)
         >>> print(features_df.head())
     """
@@ -130,8 +128,8 @@ def score_remote_bin(host, pid, model, features=None):
         >>> score = score_remote_bin('ifcb-data.whoi.edu', 'D20230101T120000_IFCB123', model)
         >>> print(f'Remote bin score: {score:.4f}')
     """
-    with open_url(f'https://{host}/data/{pid}.adc') as b:
-        return score_bin(b, model, features_to_use=features)
+    b = open_remote_bin(host, pid)
+    return score_bin(b, model, features_to_use=features)
 
 
 def score_directory(data_dir, model, features=None, verbose=True, cache_dir=None):
@@ -160,7 +158,7 @@ def score_directory(data_dir, model, features=None, verbose=True, cache_dir=None
         >>> print(results)
         >>> results.to_csv('scores.csv', index=False)
     """
-    dd = DataDirectory(data_dir)
+    dd = data_directory(data_dir)
     results = []
 
     def process_bin(b):
@@ -171,7 +169,7 @@ def score_directory(data_dir, model, features=None, verbose=True, cache_dir=None
             'label': int(score > 0.5)
         }
 
-    for b in dd:
+    for b in iter_bins(dd):
         results.append(process_bin(b))
 
     return pd.DataFrame.from_records(results)

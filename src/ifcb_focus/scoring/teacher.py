@@ -24,7 +24,7 @@ def score_bin_with_teacher(b, model, top_n=100, progress_bar=False):
     3. Returns both score and average confidence
 
     Args:
-        b: IFCB bin object (from pyifcb library).
+        b: IFCB bin object (see ifcb_focus.data.FocusBin).
         model: Trained classifier (teacher model) with predict_proba() method.
         top_n (int): Number of largest ROIs to analyze. Default is 100.
         progress_bar (bool): Whether to show progress bar. Default is False.
@@ -35,13 +35,12 @@ def score_bin_with_teacher(b, model, top_n=100, progress_bar=False):
             - sample_confidence: Mean confidence of high-confidence predictions
 
     Example:
-        >>> from ifcb import DataDirectory
         >>> import joblib
+        >>> from ifcb_focus.data import open_bin
         >>> from ifcb_focus.scoring import score_bin_with_teacher
         >>>
         >>> teacher_model = joblib.load('teacher_model.pkl')
-        >>> dd = DataDirectory('/path/to/data')
-        >>> bin_data = dd['bin_id']
+        >>> bin_data = open_bin('/path/to/data', 'bin_id')
         >>> score, confidence = score_bin_with_teacher(bin_data, teacher_model)
         >>> print(f'Score: {score:.4f}, Confidence: {confidence:.4f}')
 
@@ -50,27 +49,32 @@ def score_bin_with_teacher(b, model, top_n=100, progress_bar=False):
     """
     feature_names = None
     features_list = []
-    s = b.schema
-    width_col = s.ROI_WIDTH
-    height_col = s.ROI_HEIGHT
-    roi_metadata = b.adc
+    images = b.images
 
     # Order by area (width * height) descending
-    roi_metadata['roi_number'] = roi_metadata.index
-    roi_metadata = roi_metadata[[width_col, height_col, 'roi_number']].copy()
-    roi_metadata.loc[:, 'area'] = roi_metadata[width_col] * roi_metadata[height_col]
-    roi_metadata = roi_metadata.sort_values(by='area', ascending=False).head(top_n)
+    roi_numbers = sorted(
+        b.adc,
+        key=lambda roi_number: (
+            b.adc[roi_number]['width'] * b.adc[roi_number]['height']
+        ),
+        reverse=True
+    )[:top_n]
 
-    for roi_number in tqdm(roi_metadata['roi_number'], disable=not progress_bar):
-        if skip_image(b.images[roi_number]):
+    for roi_number in tqdm(roi_numbers, disable=not progress_bar):
+        if roi_number not in images:
             continue
-        img = preprocess_image(b.images[roi_number])
+        if skip_image(images[roi_number]):
+            continue
+        img = preprocess_image(images[roi_number])
         features = compute_features(img)
         if feature_names is None:
             feature_names = list(features.keys())
         features = list(features.values())
         features = np.array(features)
         features_list.append(features)
+
+    if not features_list:
+        return 0.0, 0.0
 
     X = pd.DataFrame(np.array(features_list), columns=feature_names)
     y_probabilities = model.predict_proba(X)
@@ -105,7 +109,7 @@ def score_remote_bin_with_teacher(host, pid, model, top_n=100, progress_bar=Fals
         >>> teacher_model = joblib.load('teacher_model.pkl')
         >>> score, conf = score_remote_bin_with_teacher('ifcb-data.whoi.edu', 'D20230101T120000_IFCB123', teacher_model)
     """
-    from ifcb import open_url
+    from ifcb_focus.data import open_remote_bin
 
-    with open_url(f'https://{host}/data/{pid}.adc') as b:
-        return score_bin_with_teacher(b, model, top_n=top_n, progress_bar=progress_bar)
+    b = open_remote_bin(host, pid)
+    return score_bin_with_teacher(b, model, top_n=top_n, progress_bar=progress_bar)
